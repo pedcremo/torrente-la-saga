@@ -1,0 +1,6 @@
+# Songs are copyrighted: keep them local, never publish them
+assets/*.mp3
+assets/*.ogg
+assets/*.m4a
+node_modules/
+.DS_Store

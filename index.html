@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" href="data:,">
+  <title>Torrente: La Saga</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0; height: 100%; background: #111;
+      touch-action: none; overscroll-behavior: none;
+      -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    }
+    body { display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    canvas {
+      width: min(100vw, calc(100vh * 800 / 480));
+      aspect-ratio: 800 / 480;
+      image-rendering: pixelated;
+      background: #4fb3ff;
+    }
+
+    /* On-screen touch controls */
+    #touch { position: fixed; inset: 0; pointer-events: none; font-family: "Press Start 2P", monospace; }
+    #touch[hidden] { display: none; }
+    #touch button {
+      pointer-events: auto; touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      border: 3px solid rgba(255, 255, 255, 0.7);
+      background: rgba(0, 0, 0, 0.25);
+      color: #fff; font: inherit; border-radius: 50%;
+      width: 76px; height: 76px; font-size: 22px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #touch button.held { background: rgba(255, 255, 255, 0.45); }
+    #touch button.on { background: rgba(255, 213, 79, 0.7); color: #111; }
+    #touch #mute.on { background: rgba(0, 0, 0, 0.25); color: #fff; opacity: 0.5; text-decoration: line-through; }
+    .pad { position: absolute; display: flex; gap: 14px; align-items: flex-end; }
+    .pad-left { left: calc(16px + env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom)); }
+    .pad-right { right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom)); }
+    .pad-top { right: calc(12px + env(safe-area-inset-right)); top: calc(56px + env(safe-area-inset-top)); gap: 10px; }
+    #touch .jump { width: 92px; height: 92px; font-size: 10px; }
+    #touch .run { width: 64px; height: 64px; font-size: 8px; margin-bottom: 40px; }
+    #touch button[hidden] { display: none; }
+    #touch .small { width: 44px; height: 44px; font-size: 12px; border-width: 2px; }
+
+    #rotate {
+      display: none; position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7); color: #ffd54f; padding: 8px 12px; border-radius: 8px;
+      font: 10px "Press Start 2P", monospace; pointer-events: none;
+    }
+    @media (orientation: portrait) and (pointer: coarse) { #rotate { display: block; } }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="800" height="480"></canvas>
+
+  <div id="touch" hidden>
+    <div class="pad pad-left">
+      <button data-key="ArrowLeft" aria-label="Izquierda">◀</button>
+      <button data-key="ArrowRight" aria-label="Derecha">▶</button>
+    </div>
+    <div class="pad pad-right">
+      <button id="shout" class="run" data-key="KeyC" aria-label="Megáfono" hidden>MITIN</button>
+      <button class="run" data-key="ShiftLeft" data-toggle aria-label="Correr">CORRER</button>
+      <button class="jump" data-key="Space" aria-label="Saltar">SALTAR</button>
+    </div>
+    <div class="pad pad-top">
+      <button id="mute" class="small" data-key="KeyM" aria-label="Música">♪</button>
+      <button class="small" data-key="KeyP" aria-label="Pausa">II</button>
+    </div>
+  </div>
+  <div id="rotate">GIRA EL MÓVIL PARA JUGAR MEJOR</div>
+
+  <script src="assets/music.js"></script>
+  <script src="src/core.js"></script>
+  <script src="src/art.js"></script>
+  <script src="src/levels.js"></script>
+  <script src="src/game.js"></script>
+</body>
+</html>
