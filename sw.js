@@ -1,7 +1,7 @@
 'use strict';
 // Torrente: La Saga — service worker: offline play once loaded.
 // Bump VERSION whenever any cached file changes so players get the update.
-const VERSION = 'torrente-v2';
+const VERSION = 'torrente-v3';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest',
   'assets/music.js', 'src/core.js', 'src/art.js', 'src/levels.js', 'src/game.js',

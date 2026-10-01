@@ -28,13 +28,23 @@ const FAN_CHANTS = [
   '¡NUNCA DEJES DE CREER!', '¡ATLETI, ATLETI, ATLÉTICO DE MADRID!', '¡CORAJE Y CORAZÓN!',
   '¡EL ATLETI ES UN SENTIMIENTO!', '¡SOMOS DEL MANZANARES, COÑO!', '¡ROJIBLANCOS HASTA LA MUERTE!',
 ];
-const FAN_POINTS = 500, HUG_FRAMES = 50, BUBBLE_FRAMES = 170;
-let lastChant = -1;
+const TORRENTE_REPLIES = [
+  '¡ESO, COÑO! ¡ATLETI!', '¡Y EL MADRID A SEGUNDA!', '¡ROJIBLANCO DE CUNA, CHAVAL!', '¡EL CHOLO Y YO, COMO HERMANOS!',
+  '¡TE INVITABA A UN WHISKY, PERO NO LLEVO SUELTO!', '¡ASÍ ME GUSTA, COLEGA!', '¡A LOS MERENGUES, NI AGUA!',
+  '¡LO QUE YO TE DIGA: ESTE AÑO, LA LIGA!', '¡QUE NO SE DIGA, HOMBRE!', '¡AQUÍ HAY AFICIÓN, COÑO!',
+];
+const FAN_POINTS = 500, HUG_FRAMES = 50, BUBBLE_FRAMES = 170, REPLY_DELAY = 45;
+let lastChant = -1, lastReply = -1;
+const pickOther = (list, last) => {
+  let i;
+  do { i = Math.floor(Math.random() * list.length); } while (i === last && list.length > 1);
+  return i;
+};
 
 function makeFan(tx) {
   return {
     x: tx * TILE, y: GROUND_Y - 36, w: 22, h: 36, homeX: tx * TILE, vx: 0.4, vy: 0, onGround: false,
-    facing: -1, t: Math.floor(Math.random() * 120), hugged: false, hugT: 0, bubble: null,
+    facing: -1, t: Math.floor(Math.random() * 120), hugged: false, hugT: 0, bubbles: [],
   };
 }
 
@@ -379,7 +389,8 @@ function updateEnemies(p) {
 
 function updateFans(p) {
   for (const f of fans) {
-    if (f.bubble && --f.bubble.t <= 0) f.bubble = null;
+    for (const b of f.bubbles) { if (b.delay > 0) b.delay--; else b.t--; }
+    f.bubbles = f.bubbles.filter(b => b.t > 0);
     if (f.x < game.camX - 200 || f.x > game.camX + VIEW_W + 200) continue;
     f.t++;
     if (f.hugT > 0) { f.hugT--; continue; }
@@ -406,14 +417,16 @@ function hugFan(p, f) {
   f.hugged = true; f.hugT = HUG_FRAMES; f.facing = -side; f.vx = 0;
   f.x = side > 0 ? p.x + p.w - 8 : p.x - f.w + 8;
   p.hug = HUG_FRAMES; p.facing = side; p.vx = 0;
-  let i;
-  do { i = Math.floor(Math.random() * FAN_CHANTS.length); } while (i === lastChant && FAN_CHANTS.length > 1);
-  lastChant = i;
-  f.bubble = { text: FAN_CHANTS[i], x: (p.x + p.w / 2 + f.x + f.w / 2) / 2, y: Math.min(p.y, f.y) - 12, t: BUBBLE_FRAMES };
+  lastChant = pickOther(FAN_CHANTS, lastChant);
+  lastReply = pickOther(TORRENTE_REPLIES, lastReply);
+  // The fan chants first; Torrente answers a moment later, each bubble opening towards its speaker's side
+  const fanSays = { text: FAN_CHANTS[lastChant], x: f.x + f.w / 2, y: f.y - 10, side, t: BUBBLE_FRAMES + REPLY_DELAY, delay: 0, fan: true };
+  const torrenteSays = { text: TORRENTE_REPLIES[lastReply], x: p.x + p.w / 2, y: p.y - 6, side: -side, t: BUBBLE_FRAMES, delay: REPLY_DELAY, fan: false, partner: fanSays };
+  f.bubbles = [fanSays, torrenteSays];
   game.score += FAN_POINTS;
   popup(side > 0 ? f.x + f.w + 4 : f.x - 40, p.y + 8, '+' + FAN_POINTS, '#ff8a80');
   for (let k = 0; k < 10; k++) {
-    particles.push({ x: f.bubble.x, y: p.y + 10, vx: (Math.random() - 0.5) * 5, vy: -4 - Math.random() * 4, life: 40, color: k % 2 ? '#fff' : '#e53935', size: 5 });
+    particles.push({ x: (p.x + p.w + f.x) / 2, y: p.y + 10, vx: (Math.random() - 0.5) * 5, vy: -4 - Math.random() * 4, life: 40, color: k % 2 ? '#fff' : '#e53935', size: 5 });
   }
   sfx.hug();
 }
@@ -626,7 +639,7 @@ function drawWorld() {
   ctx.restore();
 
   if (level.gimmick === 'dark') drawDarkness(cam);
-  for (const f of fans) if (f.bubble) drawBubble(f.bubble, cam);
+  for (const f of fans) for (const b of f.bubbles) if (b.delay <= 0) drawBubble(b, cam);
   if (game.alarm > 0 && Math.floor(game.frame / 10) % 2 === 0) box(0, 0, VIEW_W, VIEW_H, 'rgba(255, 0, 0, 0.15)');
   if (game.missileWarn && Math.floor(game.frame / 6) % 2 === 0) {
     const y = game.missileWarn.y;
@@ -636,7 +649,8 @@ function drawWorld() {
   if (game.faryShow > 0) drawFaryGod();
 }
 
-// Comic speech bubble with a tail pointing down between Torrente and the fan
+// Comic speech bubble: the tail points down at the speaker's head and the box opens towards
+// b.side, so the fan's chant and Torrente's reply sit side by side (stacked if they'd overlap)
 function drawBubble(b, cam) {
   const size = 8, lineH = 12, maxChars = 18;
   const lines = [];
@@ -648,8 +662,13 @@ function drawBubble(b, cam) {
   ctx.font = `${size}px "Press Start 2P", monospace`;
   const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16, h = lines.length * lineH + 12;
   const tipX = b.x - cam, tipY = b.y;
-  const x = clamp(tipX - w / 2, 4, VIEW_W - w - 4), y = Math.max(78, tipY - h - 12);
-  const pop = Math.min(1, (BUBBLE_FRAMES - b.t) / 8), alpha = Math.min(1, b.t / 20);
+  const x = clamp(b.side > 0 ? tipX - 4 : tipX - w + 4, 4, VIEW_W - w - 4);
+  let y = Math.max(78, tipY - h - 14);
+  const o = b.partner && b.partner.box;
+  if (o && x < o.x + o.w && x + w > o.x) y = Math.max(78, o.y - h - 8);
+  b.box = { x, y, w };
+  const life = b.fan ? BUBBLE_FRAMES + REPLY_DELAY : BUBBLE_FRAMES;
+  const pop = Math.min(1, (life - b.t) / 8), alpha = Math.min(1, b.t / 20);
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(tipX, tipY); ctx.scale(pop, pop); ctx.translate(-tipX, -tipY);
@@ -658,7 +677,8 @@ function drawBubble(b, cam) {
   const tx = clamp(tipX, x + 12, x + w - 12);
   ctx.beginPath(); ctx.moveTo(tx - 7, y + h - 1); ctx.lineTo(tipX, tipY); ctx.lineTo(tx + 7, y + h - 1); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.moveTo(tx - 7, y + h); ctx.lineTo(tipX, tipY); ctx.lineTo(tx + 7, y + h); ctx.stroke();
-  lines.forEach((l, i) => txt(l, x + w / 2, y + 7 + i * lineH, { size, align: 'center', color: i % 2 ? '#1e3a8a' : '#c62828', shadow: false }));
+  const color = i => (b.fan ? (i % 2 ? '#1e3a8a' : '#c62828') : '#263238');
+  lines.forEach((l, i) => txt(l, x + w / 2, y + 7 + i * lineH, { size, align: 'center', color: color(i), shadow: false }));
   ctx.restore();
 }
 

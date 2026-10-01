@@ -56,7 +56,7 @@ In every film:
 - Collect **euros**. Every 50 € gives an extra life.
 - Hit the purple **F** block for **El Fary's blessing**: 10 s of invincibility.
 - At the flag, Torrente walks into the bar. He's paid in whiskys and beers: the more euros in that film, the more drinks.
-- Now and then you meet a **colchonero** (Atlético de Madrid fan) waving his scarf. Walk into him and Torrente gives him a hug: +500 points and a speech bubble with an Atlético chant ("¡El Cholo es el mejor!", "¡Vivan los colchoneros!"...). Nothing can hurt you mid-hug.
+- Now and then you meet a **colchonero** (Atlético de Madrid fan) waving his scarf. Walk into him and Torrente gives him a hug: +500 points, a speech bubble with an Atlético chant ("¡El Cholo es el mejor!", "¡Vivan los colchoneros!"...) and Torrente's reply in his own bubble ("¡Y el Madrid a segunda!", "¡Te invitaba a un whisky, pero no llevo suelto!"...). Nothing can hurt you mid-hug.
 - Losing a life restarts the film. The title screen lets you pick any film.
 
 ## Code layout
