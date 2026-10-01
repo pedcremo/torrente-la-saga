@@ -202,6 +202,40 @@ function drawEnemy(e) {
   ctx.restore();
 }
 
+// ---------- Colchonero (Atlético de Madrid fan) ----------
+function drawFan(f) {
+  const hugging = f.hugT > 0;
+  const walking = !f.hugged && !hugging;
+  const leg = walking ? Math.sin(f.t * 0.2) * 2 : 0;
+  ctx.save();
+  ctx.translate(Math.round(f.x + f.w / 2), Math.round(f.y));
+  ctx.scale(f.facing, 1);
+  box(-7 + leg, 29, 5, 5, '#c62828'); box(2 - leg, 29, 5, 5, '#c62828');
+  box(-8 + leg, 33, 7, 3, '#111'); box(1 - leg, 33, 7, 3, '#111');
+  box(-9, 24, 18, 6, '#1e3a8a');
+  rrect(-10, 12, 20, 13, 4, '#fafafa');
+  for (const sx of [-8, -2, 4]) box(sx, 12, 3, 13, '#d32f2f');
+  ell(0, 6, 7, 7, SKIN);
+  box(-7, 0, 14, 3, '#4e342e'); box(-7, 0, 3, 6, '#4e342e');
+  box(3, 4, 2, 2, '#111');
+  ell(4, 10, 2.5, hugging ? 1.5 : 2.2, '#6d1b1b');
+  if (hugging) {
+    // arms wrapped forward around Torrente, scarf round the neck
+    box(-6, 11, 13, 3, '#d32f2f'); box(-1, 11, 3, 3, '#fff');
+    rrect(2, 14, 16, 5, 2, '#fafafa'); ell(18, 16.5, 3, 3, SKIN);
+    rrect(2, 20, 14, 5, 2, '#d32f2f'); ell(16, 22.5, 3, 3, SKIN);
+    ell(0, -8 - Math.sin(game.frame * 0.3) * 2, 3, 3, '#e53935');
+  } else {
+    // both arms up, scarf stretched over the head
+    rrect(-12, 1, 4, 13, 2, SKIN); rrect(8, 1, 4, 13, 2, SKIN);
+    for (let k = 0; k < 6; k++) {
+      const wave = Math.sin(f.t * 0.2 + k) * 1.5;
+      box(-12 + k * 4, -5 + wave, 4, 5, k % 2 ? '#fff' : '#d32f2f');
+    }
+  }
+  ctx.restore();
+}
+
 // ---------- La eurodiputada (Torrente 3) ----------
 function drawVIP(v) {
   ctx.save();

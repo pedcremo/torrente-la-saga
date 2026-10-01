@@ -2,7 +2,7 @@
 // Torrente: La Saga — game state, per-film gimmicks, update and rendering
 
 let levelIndex = 0, level = LEVELS[0];
-let entities = [], coins = [], votes = [], decos = [], searchlights = [], player = null;
+let entities = [], fans = [], coins = [], votes = [], decos = [], searchlights = [], player = null;
 let particles = [], popups = [], coinPops = [], bumps = new Map();
 let missiles = [], shockwaves = [], slots = new Map(), vip = null, trail = [];
 
@@ -22,10 +22,26 @@ function makeEnemy(type, tx, ty) {
   };
 }
 
+// Rojiblancos: friendly Atlético fans. Touch one and Torrente hugs him for points and a chant.
+const FAN_CHANTS = [
+  '¡EL CHOLO ES EL MEJOR!', '¡VIVAN LOS COLCHONEROS!', '¡AÚPA ATLETI!', '¡PARTIDO A PARTIDO!',
+  '¡NUNCA DEJES DE CREER!', '¡ATLETI, ATLETI, ATLÉTICO DE MADRID!', '¡CORAJE Y CORAZÓN!',
+  '¡EL ATLETI ES UN SENTIMIENTO!', '¡SOMOS DEL MANZANARES, COÑO!', '¡ROJIBLANCOS HASTA LA MUERTE!',
+];
+const FAN_POINTS = 500, HUG_FRAMES = 50, BUBBLE_FRAMES = 170;
+let lastChant = -1;
+
+function makeFan(tx) {
+  return {
+    x: tx * TILE, y: GROUND_Y - 36, w: 22, h: 36, homeX: tx * TILE, vx: 0.4, vy: 0, onGround: false,
+    facing: -1, t: Math.floor(Math.random() * 120), hugged: false, hugT: 0, bubble: null,
+  };
+}
+
 function makePlayer() {
   return {
     x: 3 * TILE, y: GROUND_Y - 44, w: 26, h: 44, vx: 0, vy: 0,
-    onGround: false, facing: 1, anim: 0, fary: 0, coyote: 0, buffer: 0, shout: 0,
+    onGround: false, facing: 1, anim: 0, fary: 0, coyote: 0, buffer: 0, shout: 0, hug: 0,
   };
 }
 
@@ -199,7 +215,7 @@ const GIMMICK_UPDATE = {
         m.dead = true; m.vy = -3;
         if (p.fary <= 0) p.vy = jumpHeld() ? -11 : -7;
         game.score += 300; popup(m.x, m.y - 10, '300'); sfx.stomp();
-      } else killPlayer('¡TE HA DADO EL MISIL!');
+      } else if (p.hug === 0) killPlayer('¡TE HA DADO EL MISIL!');
     }
     missiles = missiles.filter(m => m.x > game.camX - 120 && m.y < VIEW_H + 40);
   },
@@ -290,16 +306,19 @@ function desiredTrack() {
 }
 
 function updatePlayer(p) {
+  const hugging = p.hug > 0;
+  if (hugging) p.hug--;
   const accel = p.onGround ? 0.35 : 0.25;
   const max = runHeld() ? 5 : 3.2;
-  if (left() && !right()) { p.vx -= accel; p.facing = -1; }
-  else if (right() && !left()) { p.vx += accel; p.facing = 1; }
+  const goLeft = !hugging && left(), goRight = !hugging && right();
+  if (goLeft && !goRight) { p.vx -= accel; p.facing = -1; }
+  else if (goRight && !goLeft) { p.vx += accel; p.facing = 1; }
   else { p.vx *= p.onGround ? 0.8 : 0.95; if (Math.abs(p.vx) < 0.05) p.vx = 0; }
   p.vx = clamp(p.vx, -max, max);
 
   // Coyote time + jump buffering for forgiving controls
   p.coyote = p.onGround ? 6 : p.coyote - 1;
-  p.buffer = jumpPressed() ? 6 : p.buffer - 1;
+  p.buffer = jumpPressed() && !hugging ? 6 : p.buffer - 1;
   if (p.buffer > 0 && p.coyote > 0) {
     p.vy = -11 - Math.abs(p.vx) * 0.3;
     p.buffer = 0; p.coyote = 0;
@@ -346,7 +365,7 @@ function updateEnemies(p) {
     }
     if (e.x < game.camX - 300) e.remove = true;
 
-    if (game.state === 'play' && overlap(p, e)) {
+    if (game.state === 'play' && p.hug === 0 && overlap(p, e)) {
       if (p.fary > 0) killEnemy(e, 'flip');
       else if (p.vy > 0 && p.y + p.h - e.y < 18) {
         killEnemy(e, 'squash');
@@ -358,10 +377,52 @@ function updateEnemies(p) {
   entities = entities.filter(e => !e.remove);
 }
 
+function updateFans(p) {
+  for (const f of fans) {
+    if (f.bubble && --f.bubble.t <= 0) f.bubble = null;
+    if (f.x < game.camX - 200 || f.x > game.camX + VIEW_W + 200) continue;
+    f.t++;
+    if (f.hugT > 0) { f.hugT--; continue; }
+    if (f.hugged) {
+      // Celebrating: hops on the spot, always facing Torrente
+      f.facing = p.x > f.x ? 1 : -1;
+      if (f.onGround && f.t % 40 === 0) f.vy = -5;
+    } else {
+      // Strolls around his spot waving the scarf
+      if (Math.abs(f.x - f.homeX) > 24) f.vx = f.x > f.homeX ? -0.4 : 0.4;
+      f.hitWall = false;
+      moveX(f);
+      if (f.hitWall) f.vx = -f.vx || 0.4;
+      f.facing = f.vx > 0 ? 1 : -1;
+    }
+    f.vy = Math.min(f.vy + 0.5, 10);
+    moveY(f, false);
+    if (!f.hugged && p.hug === 0 && game.state === 'play' && overlap(p, f)) hugFan(p, f);
+  }
+}
+
+function hugFan(p, f) {
+  const side = f.x + f.w / 2 > p.x + p.w / 2 ? 1 : -1;
+  f.hugged = true; f.hugT = HUG_FRAMES; f.facing = -side; f.vx = 0;
+  f.x = side > 0 ? p.x + p.w - 8 : p.x - f.w + 8;
+  p.hug = HUG_FRAMES; p.facing = side; p.vx = 0;
+  let i;
+  do { i = Math.floor(Math.random() * FAN_CHANTS.length); } while (i === lastChant && FAN_CHANTS.length > 1);
+  lastChant = i;
+  f.bubble = { text: FAN_CHANTS[i], x: (p.x + p.w / 2 + f.x + f.w / 2) / 2, y: Math.min(p.y, f.y) - 12, t: BUBBLE_FRAMES };
+  game.score += FAN_POINTS;
+  popup(side > 0 ? f.x + f.w + 4 : f.x - 40, p.y + 8, '+' + FAN_POINTS, '#ff8a80');
+  for (let k = 0; k < 10; k++) {
+    particles.push({ x: f.bubble.x, y: p.y + 10, vx: (Math.random() - 0.5) * 5, vy: -4 - Math.random() * 4, life: 40, color: k % 2 ? '#fff' : '#e53935', size: 5 });
+  }
+  sfx.hug();
+}
+
 function updatePlay() {
   const p = player;
   updatePlayer(p);
   updateEnemies(p);
+  updateFans(p);
   for (const c of coins) {
     if (!c.taken && overlap(p, c)) { c.taken = true; addEuros(1); sfx.coin(); }
   }
@@ -551,6 +612,7 @@ function drawWorld() {
   for (const v of votes) if (!v.taken && v.x > cam - 32 && v.x < cam + VIEW_W) drawVote(v.x, v.y);
   for (const c of coinPops) drawCoin(c.x, c.y, 16, 20, phase * 3, style);
   for (const e of entities) if (e.active) drawEnemy(e);
+  for (const f of fans) if (f.x > cam - 60 && f.x < cam + VIEW_W + 60) drawFan(f);
   if (vip) drawVIP(vip);
   drawTorrente(player);
   drawBarFront();
@@ -564,6 +626,7 @@ function drawWorld() {
   ctx.restore();
 
   if (level.gimmick === 'dark') drawDarkness(cam);
+  for (const f of fans) if (f.bubble) drawBubble(f.bubble, cam);
   if (game.alarm > 0 && Math.floor(game.frame / 10) % 2 === 0) box(0, 0, VIEW_W, VIEW_H, 'rgba(255, 0, 0, 0.15)');
   if (game.missileWarn && Math.floor(game.frame / 6) % 2 === 0) {
     const y = game.missileWarn.y;
@@ -571,6 +634,32 @@ function drawWorld() {
     txt('!', VIEW_W - 27, y, { size: 14, align: 'center' });
   }
   if (game.faryShow > 0) drawFaryGod();
+}
+
+// Comic speech bubble with a tail pointing down between Torrente and the fan
+function drawBubble(b, cam) {
+  const size = 8, lineH = 12, maxChars = 18;
+  const lines = [];
+  for (const word of plainCaps(b.text).split(' ')) {
+    const lastLine = lines[lines.length - 1];
+    if (lastLine && (lastLine + ' ' + word).length <= maxChars) lines[lines.length - 1] = lastLine + ' ' + word;
+    else lines.push(word);
+  }
+  ctx.font = `${size}px "Press Start 2P", monospace`;
+  const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16, h = lines.length * lineH + 12;
+  const tipX = b.x - cam, tipY = b.y;
+  const x = clamp(tipX - w / 2, 4, VIEW_W - w - 4), y = Math.max(78, tipY - h - 12);
+  const pop = Math.min(1, (BUBBLE_FRAMES - b.t) / 8), alpha = Math.min(1, b.t / 20);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(tipX, tipY); ctx.scale(pop, pop); ctx.translate(-tipX, -tipY);
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill(); ctx.stroke();
+  const tx = clamp(tipX, x + 12, x + w - 12);
+  ctx.beginPath(); ctx.moveTo(tx - 7, y + h - 1); ctx.lineTo(tipX, tipY); ctx.lineTo(tx + 7, y + h - 1); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(tx - 7, y + h); ctx.lineTo(tipX, tipY); ctx.lineTo(tx + 7, y + h); ctx.stroke();
+  lines.forEach((l, i) => txt(l, x + w / 2, y + 7 + i * lineH, { size, align: 'center', color: i % 2 ? '#1e3a8a' : '#c62828', shadow: false }));
+  ctx.restore();
 }
 
 function hudInfo() {

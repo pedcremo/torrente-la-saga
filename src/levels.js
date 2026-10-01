@@ -225,7 +225,7 @@ const THEMES = {
 // ---------- Level builder ----------
 function buildLevel(lv) {
   grid = Array.from({ length: ROWS }, () => new Array(LEVEL_W).fill(T.EMPTY));
-  entities = []; coins = []; votes = []; decos = []; searchlights = [];
+  entities = []; coins = []; votes = []; decos = []; searchlights = []; fans = [];
   const set = (x, y, t) => { grid[y][x] = t; };
   const L = {
     ground(a, b) { for (let x = a; x <= b; x++) { set(x, 13, T.SAND); set(x, 14, T.DIRT); } },
@@ -255,6 +255,18 @@ function buildLevel(lv) {
     finale() { L.ground(176, LEVEL_W - 1); L.stairs(180, 8, true); },
   };
   lv.build(L);
+  placeFans();
+}
+
+// Atlético fans turn up now and then: three per film, on a free stretch of ground near each spot
+function placeFans() {
+  const free = x => [0, 1, 2].every(i => isSolid(x + i, 13) && [10, 11, 12].every(y => !isSolid(x + i, y)));
+  const nearEnemy = x => entities.some(e => Math.abs(e.x / TILE - x) < 4);
+  for (const spot of [38, 98, 142]) {
+    for (let x = spot; x < spot + 30; x++) {
+      if (free(x) && !nearEnemy(x)) { fans.push(makeFan(x + 1)); break; }
+    }
+  }
 }
 
 // ---------- The six films ----------

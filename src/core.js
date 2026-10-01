@@ -164,6 +164,7 @@ const sfx = {
   slotTick: () => tone(1500, 0.02, { vol: 0.02 }),
   jackpot: () => seq([784, 988, 1175, 1568, 1175, 1568, 2093], 0.07, { vol: 0.06 }),
   lose: () => seq([400, 300, 200], 0.15, { type: 'sawtooth', vol: 0.05 }),
+  hug: () => seq([523, 659, 784, 659, 1047], 0.09, { type: 'triangle', vol: 0.08 }),
   shout: () => { tone(220, 0.35, { type: 'sawtooth', to: 110, vol: 0.09 }); tone(330, 0.35, { type: 'square', to: 160, vol: 0.05 }); },
 };
 
