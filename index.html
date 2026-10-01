@@ -5,7 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="icon" href="data:,">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Torrente">
+  <meta name="theme-color" content="#111111">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <title>Torrente: La Saga</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -18,6 +23,7 @@
     body { display: flex; align-items: center; justify-content: center; overflow: hidden; }
     canvas {
       width: min(100vw, calc(100vh * 800 / 480));
+      width: min(100vw, calc(100dvh * 800 / 480));
       aspect-ratio: 800 / 480;
       image-rendering: pixelated;
       background: #4fb3ff;
@@ -69,6 +75,8 @@
       <button class="jump" data-key="Space" aria-label="Saltar">SALTAR</button>
     </div>
     <div class="pad pad-top">
+      <button id="install" class="small" aria-label="Instalar" hidden>⤓</button>
+      <button id="fullscreen" class="small" aria-label="Pantalla completa" hidden>⛶</button>
       <button id="mute" class="small" data-key="KeyM" aria-label="Música">♪</button>
       <button class="small" data-key="KeyP" aria-label="Pausa">II</button>
     </div>
@@ -80,5 +88,8 @@
   <script src="src/art.js"></script>
   <script src="src/levels.js"></script>
   <script src="src/game.js"></script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js');
+  </script>
 </body>
 </html>

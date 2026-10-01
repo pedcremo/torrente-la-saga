@@ -42,6 +42,7 @@ function enableTouch() {
   ui.hidden = false;
   for (const btn of ui.querySelectorAll('button')) {
     const code = btn.dataset.key;
+    if (!code) continue; // fullscreen / install buttons are wired below
     if (btn.hasAttribute('data-toggle')) {
       btn.addEventListener('pointerdown', e => {
         e.preventDefault(); initAudio();
@@ -72,8 +73,57 @@ if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) enableT
 window.addEventListener('touchstart', enableTouch, { once: true, passive: true });
 canvas.addEventListener('pointerdown', () => {
   initAudio();
+  if (isTouch && !autoFullscreenTried) { autoFullscreenTried = true; if (!isFullscreen()) toggleFullscreen(); }
   if (['title', 'intro', 'reward', 'gameover', 'ending'].includes(game.state)) pressed.Enter = true;
 });
+
+// ---------- Fullscreen and PWA install ----------
+// The installed PWA already opens fullscreen (manifest.webmanifest); in the browser,
+// the first tap on a touch device and the ⛶ button (F on a keyboard) request it.
+let autoFullscreenTried = false;
+const isStandalone = () => !!(window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches ||
+  matchMedia('(display-mode: standalone)').matches)) || navigator.standalone === true;
+const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+const fullscreenSupported = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+function lockLandscape() {
+  try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* unsupported */ }
+}
+function toggleFullscreen() {
+  if (!fullscreenSupported) return;
+  const el = document.documentElement;
+  if (isFullscreen()) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else if (el.requestFullscreen) {
+    el.requestFullscreen({ navigationUI: 'hide' }).then(lockLandscape, () => {});
+  } else if (el.webkitRequestFullscreen) {
+    el.webkitRequestFullscreen();
+  }
+}
+window.addEventListener('keydown', e => { if (e.code === 'KeyF' && !e.repeat) toggleFullscreen(); });
+{
+  const fsBtn = document.getElementById('fullscreen');
+  if (fsBtn && fullscreenSupported && !isStandalone()) {
+    fsBtn.hidden = false;
+    fsBtn.addEventListener('pointerdown', e => { e.preventDefault(); autoFullscreenTried = true; toggleFullscreen(); });
+  }
+  if (isStandalone()) lockLandscape();
+
+  // Android/Chrome: offer our own install button (iOS: Share → Add to Home Screen)
+  let installPrompt = null;
+  const installBtn = document.getElementById('install');
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    installPrompt = e;
+    if (installBtn) installBtn.hidden = false;
+  });
+  window.addEventListener('appinstalled', () => { installPrompt = null; if (installBtn) installBtn.hidden = true; });
+  if (installBtn) installBtn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    installPrompt.userChoice.finally(() => { installPrompt = null; installBtn.hidden = true; });
+  });
+}
 
 // ---------- Audio (tiny WebAudio synth) ----------
 let actx = null;

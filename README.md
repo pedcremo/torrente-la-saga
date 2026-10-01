@@ -21,10 +21,13 @@ A browser platformer inspired by Super Mario Bros. Plain HTML5 Canvas and JavaSc
 | C / K | Megaphone (film 6 only) |
 | P | Pause |
 | M | Music on/off (setting is remembered) |
+| F | Fullscreen on/off |
 | ◀ ▶ on the title screen | Choose film |
 | Enter / click | Start / continue |
 
-**Mobile:** on-screen buttons appear automatically on touch devices: ◀ ▶ (you can slide your thumb between them), SALTAR (jump), CORRER (run on/off), MITIN (megaphone, film 6 only), ♪ (music) and II (pause). Tap the screen to start. Landscape works best.
+**Mobile:** on-screen buttons appear automatically on touch devices: ◀ ▶ (you can slide your thumb between them), SALTAR (jump), CORRER (run on/off), MITIN (megaphone, film 6 only), ♪ (music), II (pause) and ⛶ (fullscreen). The first tap on the screen also switches to fullscreen. Landscape works best.
+
+**Install as an app (PWA):** the game is an installable Progressive Web App and works offline once loaded. On Android/Chrome, tap the ⤓ button (or the browser menu → *Install app*); on iPhone/iPad, Safari → Share → *Add to Home Screen*. The installed app opens fullscreen in landscape. After changing any game file, bump `VERSION` in `sw.js` so installed copies pick up the update.
 
 **Music:** an original beach rumba over the Andalusian cadence (Am–G–F–E), made in code with WebAudio. A faster version plays while El Fary's blessing is active and on the reward screen.
 
@@ -63,3 +66,4 @@ Plain scripts loaded in order by `index.html`:
 - `src/art.js`: shape-drawn characters, enemies, items and goal bars
 - `src/levels.js`: the themes (backgrounds, tile colours, scenery) and the six level layouts
 - `src/game.js`: game states, the twist for each film, HUD, screens and the main loop
+- `manifest.webmanifest`, `sw.js`, `icons/`: PWA manifest, offline service worker and app icons
